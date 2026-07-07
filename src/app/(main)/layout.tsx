@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import Cart from "@/components/Cart";
 import BottomNav from "@/components/BottomNav";
 import RecentSalesPopup from "@/components/RecentSalesPopup";
+import ExitIntentPopup from "@/components/ExitIntentPopup";
 
 export default function MainLayout({
   children,
@@ -17,6 +18,7 @@ export default function MainLayout({
       <Cart />
       <BottomNav />
       <RecentSalesPopup />
+      <ExitIntentPopup />
     </>
   );
 }

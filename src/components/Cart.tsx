@@ -1,16 +1,18 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
-import { X, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
+import { X, Plus, Minus, ShoppingBag, ArrowRight, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { MOCK_PRODUCTS } from "@/lib/mockData";
 
 export default function Cart() {
   const { 
     items, 
     cartTotal, 
     updateQuantity, 
+    addItem,
     remainingForFreeDelivery, 
     freeDeliveryThreshold,
     isCartOpen,
@@ -20,6 +22,8 @@ export default function Cart() {
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState(15 * 60);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [prevRemaining, setPrevRemaining] = useState(remainingForFreeDelivery);
   
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -34,6 +38,16 @@ export default function Cart() {
     return () => clearInterval(timer);
   }, [isCartOpen, items.length]);
 
+  useEffect(() => {
+    if (prevRemaining > 0 && remainingForFreeDelivery === 0 && isCartOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrevRemaining(remainingForFreeDelivery);
+  }, [remainingForFreeDelivery, isCartOpen, prevRemaining]);
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -41,6 +55,8 @@ export default function Cart() {
   };
 
   if (!mounted) return null;
+
+  const crossSellItems = MOCK_PRODUCTS.filter(p => !items.some(item => item.product.id === p.id)).slice(0, 2);
 
   const progressPercentage = Math.min(
     ((freeDeliveryThreshold - remainingForFreeDelivery) / freeDeliveryThreshold) * 100,
@@ -63,6 +79,18 @@ export default function Cart() {
           isCartOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
+        {/* Simple CSS Confetti */}
+        {showConfetti && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden z-50 flex items-center justify-center">
+            <div className="absolute top-1/4 flex gap-4 text-4xl animate-[bounce_1s_ease-in-out_3]">
+              <span className="animate-pulse">🎉</span>
+              <span className="-translate-y-4 animate-pulse delay-75">🎊</span>
+              <span className="animate-pulse delay-150">🎉</span>
+              <span className="-translate-y-2 animate-pulse delay-300">✨</span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white px-4 py-4 border-b flex items-center justify-between sticky top-0 z-10">
           <h2 className="text-lg font-bold text-gray-900 flex items-center">
@@ -165,6 +193,41 @@ export default function Cart() {
               </div>
             ))
             }
+            
+            {/* Cross-Sell Section */}
+            {crossSellItems.length > 0 && (
+              <div className="pt-4 border-t border-gray-100 mt-2 px-4 mb-4">
+                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
+                  <TrendingUp className="h-4 w-4 mr-1.5 text-orange-500" /> Frequently Bought Together
+                </h3>
+                <div className="space-y-3">
+                  {crossSellItems.map(product => (
+                    <div key={product.id} className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm flex gap-3 items-center">
+                      <div className="h-12 w-12 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative">
+                        <Image 
+                          src={product.image} 
+                          alt={product.name}
+                          fill
+                          sizes="48px"
+                          className="object-cover p-1"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 text-xs line-clamp-1">{product.name}</h4>
+                        <span className="font-bold text-gray-900 text-xs">NPR {product.price}</span>
+                      </div>
+                      <button 
+                        onClick={() => addItem(product)}
+                        className="bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-colors h-8 w-8 rounded-lg flex items-center justify-center font-bold"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             </div>
             </div>
           )}
