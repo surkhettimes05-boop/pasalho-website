@@ -2,7 +2,7 @@
 
 import { useCart, Product } from "@/context/CartContext";
 import { MOCK_PRODUCTS, MOCK_CATEGORIES, MOCK_CATEGORY_DETAILS } from "@/lib/mockData";
-import { MapPin, Search, ChevronRight, Plus, Minus, Tag, Zap, Check } from "lucide-react";
+import { MapPin, Search, ChevronRight, Plus, Minus, Tag, Zap, Check, Star } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import ConversionBar from "@/components/ConversionBar";
@@ -48,9 +48,17 @@ function ProductCard({ product }: { product: Product }) {
       
       <div className="flex-1 flex flex-col">
         <div className="text-[10px] md:text-xs text-gray-500 mb-1">{product.unit}</div>
-        <h3 className="font-semibold text-gray-900 text-sm md:text-base leading-tight mb-3 line-clamp-2 hover:text-orange-600 transition-colors cursor-pointer">
+        <h3 className="font-semibold text-gray-900 text-sm md:text-base leading-tight mb-1.5 line-clamp-2 hover:text-orange-600 transition-colors cursor-pointer">
           {product.name}
         </h3>
+        
+        {product.rating && (
+          <div className="flex items-center mb-3">
+            <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+            <span className="text-[11px] md:text-xs font-medium text-gray-700 ml-1">{product.rating}</span>
+            <span className="text-[10px] md:text-xs text-gray-400 ml-1">({product.reviews})</span>
+          </div>
+        )}
         
         <div className="mt-auto flex items-end justify-between">
           <div className="flex flex-col">

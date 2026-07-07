@@ -11,9 +11,11 @@ export interface Product {
   mrp?: number;
   unit: string;
   image: string;
-  description: string;
+  description?: string;
   stock?: number;
   badge?: string;
+  rating?: number;
+  reviews?: number;
 }
 
 export interface CartItem {

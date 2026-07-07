@@ -8,7 +8,9 @@ export const MOCK_PRODUCTS = [
     unit: "5 kg",
     image: "/images/products/staples_flour.jpg",
     description: "100% pure whole wheat chakki fresh atta.",
-    badge: "Most popular"
+    badge: "Most popular",
+    rating: 4.8,
+    reviews: 124
   },
   {
     id: "p2",
@@ -20,7 +22,9 @@ export const MOCK_PRODUCTS = [
     image: "/images/products/snacks_chips.jpg",
     description: "Ready to eat brown noodles.",
     stock: 3,
-    badge: "500+ orders this week"
+    badge: "500+ orders this week",
+    rating: 4.9,
+    reviews: 856
   },
   {
     id: "p3",
@@ -30,7 +34,9 @@ export const MOCK_PRODUCTS = [
     mrp: 210,
     unit: "250ml",
     image: "/images/products/personal_care_soap.jpg",
-    description: "First aid and personal hygiene liquid."
+    description: "First aid and personal hygiene liquid.",
+    rating: 4.6,
+    reviews: 89
   },
   {
     id: "p4",
@@ -42,7 +48,9 @@ export const MOCK_PRODUCTS = [
     image: "/images/products/baby_diapers.jpg",
     description: "Up to 12 hours of dryness for your baby.",
     stock: 5,
-    badge: "Selling fast"
+    badge: "Selling fast",
+    rating: 4.7,
+    reviews: 210
   },
   {
     id: "p5",
@@ -52,7 +60,9 @@ export const MOCK_PRODUCTS = [
     mrp: 45,
     unit: "300g",
     image: "/images/products/cleaning_dishwash.jpg",
-    description: "Removes tough grease with the power of lemons."
+    description: "Removes tough grease with the power of lemons.",
+    rating: 4.5,
+    reviews: 67
   },
   {
     id: "p6",
@@ -63,7 +73,9 @@ export const MOCK_PRODUCTS = [
     unit: "1 Liter",
     image: "/images/products/beverages_cola.jpg",
     description: "Refreshing original cola beverage.",
-    badge: "Bestseller"
+    badge: "Bestseller",
+    rating: 4.8,
+    reviews: 342
   },
   {
     id: "p7",
@@ -73,7 +85,9 @@ export const MOCK_PRODUCTS = [
     mrp: 2100,
     unit: "25 kg",
     image: "/images/products/staples_flour.jpg",
-    description: "Premium quality daily consumption rice."
+    description: "Premium quality daily consumption rice.",
+    rating: 4.4,
+    reviews: 45
   },
   {
     id: "p8",
@@ -84,7 +98,9 @@ export const MOCK_PRODUCTS = [
     unit: "1 kg",
     image: "/images/products/household_towels.jpg",
     description: "Natural rock salt with essential minerals.",
-    stock: 2
+    stock: 2,
+    rating: 4.9,
+    reviews: 18
   }
 ];
 

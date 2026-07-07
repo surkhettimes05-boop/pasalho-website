@@ -19,11 +19,26 @@ export default function Cart() {
   
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const [timeLeft, setTimeLeft] = useState(15 * 60);
   
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isCartOpen || items.length === 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isCartOpen, items.length]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   if (!mounted) return null;
 
@@ -82,7 +97,7 @@ export default function Cart() {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto hide-scrollbar">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">
               <ShoppingBag className="h-16 w-16 text-gray-300" />
@@ -95,8 +110,16 @@ export default function Cart() {
               </button>
             </div>
           ) : (
-            items.map((item) => (
-              <div key={item.product.id} className="bg-white p-4 rounded-2xl shadow-sm flex gap-4">
+            <div className="space-y-4 pb-4">
+              {/* Urgency Banner */}
+              <div className="bg-orange-50 px-4 py-2 border-b border-orange-100 flex items-center justify-center sticky top-0 z-10">
+                <span className="text-xs text-orange-800 font-medium">
+                  🛒 High demand! Your cart is reserved for <span className="font-bold text-orange-600 ml-1">{formatTime(timeLeft)}</span>
+                </span>
+              </div>
+              <div className="px-4 space-y-4">
+                {items.map((item) => (
+                  <div key={item.product.id} className="bg-white p-4 rounded-2xl shadow-sm flex gap-4">
                 <div className="h-20 w-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 relative">
                   <Image 
                     src={item.product.image} 
@@ -141,6 +164,9 @@ export default function Cart() {
                 </div>
               </div>
             ))
+            }
+            </div>
+            </div>
           )}
         </div>
 
