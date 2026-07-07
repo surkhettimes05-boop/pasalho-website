@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
 import { CartProvider } from "@/context/CartContext";
-import Cart from "@/components/Cart";
-import BottomNav from "@/components/BottomNav";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,11 +39,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} antialiased`}>
       <body className="flex flex-col min-h-screen">
         <CartProvider>
-          <Navigation />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <Cart />
-          <BottomNav />
+          {children}
         </CartProvider>
       </body>
     </html>

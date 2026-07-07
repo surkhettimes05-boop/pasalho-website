@@ -4,6 +4,7 @@ import { useCart } from "@/context/CartContext";
 import { X, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function Cart() {
   const { 
@@ -17,6 +18,8 @@ export default function Cart() {
   } = useCart();
   
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+  
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
@@ -155,7 +158,13 @@ export default function Cart() {
               </span>
             </div>
             
-            <button className="w-full flex items-center justify-between bg-orange-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-colors">
+            <button 
+              onClick={() => {
+                setCartOpen(false);
+                router.push("/checkout");
+              }}
+              className="w-full flex items-center justify-between bg-orange-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-colors"
+            >
               <div className="flex flex-col items-start">
                 <span className="text-xs text-orange-200">Total to pay</span>
                 <span className="text-lg">NPR {cartTotal + (remainingForFreeDelivery === 0 ? 0 : 50)}</span>
