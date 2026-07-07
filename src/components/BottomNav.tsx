@@ -6,13 +6,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function BottomNav() {
-  const { itemCount, setCartOpen } = useCart();
+  const { itemCount, setCartOpen, setSearchOpen } = useCart();
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Search", href: "/search", icon: Search },
-    { name: "Categories", href: "/categories", icon: Grid },
+    { name: "Home", href: "/", icon: Home, action: null },
+    { name: "Search", href: "#", icon: Search, action: () => setSearchOpen(true) },
+    { name: "Categories", href: "/#categories", icon: Grid, action: null },
   ];
 
   return (
@@ -21,7 +21,16 @@ export default function BottomNav() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
-          return (
+          return item.action ? (
+            <button
+              key={item.name}
+              onClick={item.action}
+              className={`flex flex-col items-center justify-center space-y-1 text-gray-500 hover:text-gray-900`}
+            >
+              <Icon className="h-6 w-6" />
+              <span className="text-[10px] font-medium">{item.name}</span>
+            </button>
+          ) : (
             <Link
               key={item.name}
               href={item.href}

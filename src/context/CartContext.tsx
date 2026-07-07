@@ -33,6 +33,8 @@ interface CartContextType {
   remainingForFreeDelivery: number;
   isCartOpen: boolean;
   setCartOpen: (isOpen: boolean) => void;
+  isSearchOpen: boolean;
+  setSearchOpen: (isOpen: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -42,6 +44,7 @@ export const FREE_DELIVERY_THRESHOLD = 1000;
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setCartOpen] = useState(false);
+  const [isSearchOpen, setSearchOpen] = useState(false);
 
   const addItem = (product: Product, quantity: number = 1) => {
     setItems((prev) => {
@@ -101,6 +104,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     remainingForFreeDelivery,
     isCartOpen,
     setCartOpen,
+    isSearchOpen,
+    setSearchOpen,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

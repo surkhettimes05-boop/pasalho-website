@@ -2,14 +2,22 @@
 
 import { useCart, Product } from "@/context/CartContext";
 import { MOCK_PRODUCTS, MOCK_CATEGORIES, MOCK_CATEGORY_DETAILS } from "@/lib/mockData";
-import { MapPin, Search, ChevronRight, Plus, Minus, Tag, Zap } from "lucide-react";
+import { MapPin, Search, ChevronRight, Plus, Minus, Tag, Zap, Check } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 import ConversionBar from "@/components/ConversionBar";
 
 function ProductCard({ product }: { product: Product }) {
   const { items, addItem, updateQuantity } = useCart();
   const cartItem = items.find(item => item.product.id === product.id);
   const quantity = cartItem?.quantity || 0;
+  const [justAdded, setJustAdded] = useState(false);
+
+  const handleAdd = () => {
+    addItem(product);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 p-3 flex flex-col relative h-full">
@@ -58,10 +66,14 @@ function ProductCard({ product }: { product: Product }) {
 
           {quantity === 0 ? (
             <button 
-              onClick={() => addItem(product)}
-              className="h-8 w-8 md:h-10 md:w-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center hover:bg-orange-600 hover:text-white font-bold border border-orange-200 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95"
+              onClick={handleAdd}
+              className={`h-8 w-8 md:h-10 md:w-10 rounded-lg flex items-center justify-center font-bold border transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 ${
+                justAdded 
+                  ? 'bg-green-500 text-white border-green-600' 
+                  : 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border-orange-200'
+              }`}
             >
-              <Plus className="h-5 w-5" />
+              {justAdded ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
             </button>
           ) : (
             <div className="flex items-center bg-orange-600 rounded-lg text-white h-8 md:h-10 overflow-hidden shadow-sm">
@@ -169,8 +181,8 @@ export default function Home() {
         <ConversionBar />
 
         {/* Variety Loop: Categories */}
-        <section>
-          <div className="flex overflow-x-auto hide-scrollbar gap-4 md:gap-8 pb-4 snap-x md:grid md:grid-cols-7 md:overflow-visible">
+        <section id="categories" className="sticky top-[72px] z-20 bg-gray-50 pt-4 pb-2 border-b border-gray-200 shadow-sm md:static md:bg-transparent md:pt-0 md:pb-0 md:border-none md:shadow-none -mx-4 px-4 sm:mx-0 sm:px-0 mt-0">
+          <div className="flex overflow-x-auto hide-scrollbar gap-4 md:gap-8 pb-2 snap-x md:grid md:grid-cols-7 md:overflow-visible">
             {MOCK_CATEGORY_DETAILS.map((cat) => (
               <div key={cat.name} className="flex flex-col items-center gap-3 snap-start group cursor-pointer w-20 md:w-full flex-shrink-0">
                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-white to-gray-50 flex items-center justify-center shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300 border border-gray-100 overflow-hidden relative">

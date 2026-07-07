@@ -1,9 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { CheckCircle2, Package, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function CheckoutSuccessPage() {
-  // Generate a random order ID for display purposes
-  const orderId = `PHO-${Math.floor(100000 + Math.random() * 900000)}`;
+  const [orderId, setOrderId] = useState("PHO-...");
+
+  useEffect(() => {
+    // Generate a random order ID for display purposes after mount
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrderId(`PHO-${Math.floor(100000 + Math.random() * 900000)}`);
+  }, []);
 
   return (
     <div className="max-w-2xl mx-auto text-center py-16 px-4">
