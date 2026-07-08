@@ -1,35 +1,46 @@
 "use client";
 
-import { useCart, Product } from "@/context/CartContext";
-import { MOCK_PRODUCTS, MOCK_CATEGORIES, MOCK_CATEGORY_DETAILS } from "@/lib/mockData";
-import { MapPin, Search, ChevronRight, Plus, Minus, Tag, Zap, Check, Star } from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { MOCK_CATEGORY_DETAILS } from "@/lib/mockData";
+import { MapPin, Search, ChevronRight, Plus, Minus, Tag, Zap, Check, Star, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import ConversionBar from "@/components/ConversionBar";
+import { useQuery } from '@tanstack/react-query';
+import { catalogApi, Product as ApiProduct } from '@/lib/api/catalog';
+import { useRouter } from 'next/navigation';
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({ product }: { product: ApiProduct }) {
   const { items, addItem, updateQuantity } = useCart();
   const cartItem = items.find(item => item.product.id === product.id);
   const quantity = cartItem?.quantity || 0;
   const [justAdded, setJustAdded] = useState(false);
 
   const handleAdd = () => {
-    addItem(product);
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: Number(product.sellingPrice || product.mrp || 0),
+      image: product.imageUrl || '/placeholder.png',
+      unit: (product as any).defaultUnit?.name || 'Unit'
+    });
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
   };
+
+  const isLowStock = product.stock > 0 && product.stock <= 5;
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 p-3 flex flex-col relative h-full">
       {/* Tags/Badges */}
       <div className="absolute top-0 left-0 z-10 w-full px-3 py-2 flex flex-col gap-1 pointer-events-none">
-        {product.badge && (
+        {product.storefrontCategory && (
           <div className="bg-orange-600 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase self-start shadow-sm flex items-center">
             <Zap className="h-3 w-3 mr-0.5" />
-            {product.badge}
+            {product.storefrontCategory}
           </div>
         )}
-        {product.stock && product.stock <= 5 && (
+        {isLowStock && (
           <div className="bg-red-500 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase self-start shadow-sm">
             Only {product.stock} left
           </div>
@@ -38,7 +49,7 @@ function ProductCard({ product }: { product: Product }) {
 
       <div className="h-32 md:h-40 w-full bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden relative mb-3 p-2 flex items-center justify-center border border-gray-100/50">
         <Image 
-          src={product.image} 
+          src={product.imageUrl || '/placeholder.png'} 
           alt={product.name}
           fill
           sizes="(max-width: 768px) 100vw, 33vw"
@@ -47,28 +58,20 @@ function ProductCard({ product }: { product: Product }) {
       </div>
       
       <div className="flex-1 flex flex-col">
-        <div className="text-[10px] md:text-xs text-gray-500 mb-1">{product.unit}</div>
+        <div className="text-[10px] md:text-xs text-gray-500 mb-1">{/* @ts-ignore */}{(product.defaultUnit?.name) || 'Unit'}</div>
         <h3 className="font-semibold text-gray-900 text-sm md:text-base leading-tight mb-1.5 line-clamp-2 hover:text-orange-600 transition-colors cursor-pointer">
           {product.name}
         </h3>
         
-        {product.rating && (
-          <div className="flex items-center mb-3">
-            <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-            <span className="text-[11px] md:text-xs font-medium text-gray-700 ml-1">{product.rating}</span>
-            <span className="text-[10px] md:text-xs text-gray-400 ml-1">({product.reviews})</span>
-          </div>
-        )}
-        
         <div className="mt-auto flex items-end justify-between">
           <div className="flex flex-col">
-            {product.mrp && (
+            {product.mrp && product.mrp > product.sellingPrice && (
               <span className="text-[10px] md:text-xs text-gray-400 line-through">
                 NPR {product.mrp}
               </span>
             )}
             <span className="font-bold text-gray-900 text-sm md:text-base">
-              NPR {product.price}
+              NPR {product.sellingPrice || product.mrp}
             </span>
           </div>
 
@@ -109,6 +112,32 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export default function Home() {
+  const router = useRouter();
+
+  const { data: categoriesData } = useQuery({
+    queryKey: ['public-categories'],
+    queryFn: () => catalogApi.getCategories(),
+  });
+
+  const { data: productsData, isLoading } = useQuery({
+    queryKey: ['public-products', { limit: 100 }],
+    queryFn: () => catalogApi.getProducts({ limit: 100 }),
+  });
+
+  const categories = categoriesData || [];
+  const products = productsData?.data || [];
+
+  // Group products by category dynamically
+  const productsByCategory = categories.reduce((acc, cat) => {
+    const catProducts = products.filter(p => p.categoryId === cat.id);
+    if (catProducts.length > 0) {
+      acc[cat.name] = catProducts;
+    }
+    return acc;
+  }, {} as Record<string, ApiProduct[]>);
+
+  const featuredProducts = products.slice(0, 5);
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Sticky Header: Urgency & Hyperlocal */}
@@ -139,6 +168,12 @@ export default function Home() {
                 type="text"
                 className="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white transition-all"
                 placeholder="Search for 'Atta' or 'Noodles'"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    // Navigate to products page with search (could implement via query params)
+                    router.push('/products');
+                  }
+                }}
               />
             </div>
             
@@ -165,6 +200,7 @@ export default function Home() {
             type="text"
             className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-white shadow-sm text-sm focus:outline-none focus:ring-1 focus:ring-orange-500"
             placeholder="Search for anything..."
+            onClick={() => router.push('/products')}
           />
         </div>
 
@@ -180,7 +216,6 @@ export default function Home() {
           <div className="relative z-10 bg-white/20 px-6 py-3 md:px-8 md:py-4 rounded-xl backdrop-blur-md border border-white/40 font-mono font-bold text-xl md:text-3xl tracking-wider group-hover:scale-110 group-hover:bg-white/30 transition-all duration-500 shadow-inner">
             WELCOME20
           </div>
-          {/* Decorative circles */}
           <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 rounded-full bg-white opacity-20 blur-2xl group-hover:scale-150 transition-transform duration-700 ease-out"></div>
           <div className="absolute bottom-0 right-32 -mb-8 w-24 h-24 rounded-full bg-white opacity-20 blur-xl"></div>
         </div>
@@ -192,7 +227,11 @@ export default function Home() {
         <section id="categories" className="sticky top-[72px] z-20 bg-gray-50 pt-4 pb-2 border-b border-gray-200 shadow-sm md:static md:bg-transparent md:pt-0 md:pb-0 md:border-none md:shadow-none -mx-4 px-4 sm:mx-0 sm:px-0 mt-0">
           <div className="flex overflow-x-auto hide-scrollbar gap-4 md:gap-8 pb-2 snap-x md:grid md:grid-cols-7 md:overflow-visible">
             {MOCK_CATEGORY_DETAILS.map((cat) => (
-              <div key={cat.name} className="flex flex-col items-center gap-3 snap-start group cursor-pointer w-20 md:w-full flex-shrink-0">
+              <div 
+                key={cat.name} 
+                onClick={() => router.push('/products')}
+                className="flex flex-col items-center gap-3 snap-start group cursor-pointer w-20 md:w-full flex-shrink-0"
+              >
                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-white to-gray-50 flex items-center justify-center shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300 border border-gray-100 overflow-hidden relative">
                   <Image 
                     src={cat.image}
@@ -211,118 +250,60 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Habit Loop: Reorder */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center">
-              Reorder your usual
-            </h2>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-8 w-8 text-orange-500 animate-spin" />
           </div>
-          <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible">
-            {MOCK_PRODUCTS.slice(0, 5).map(product => (
-              <div key={product.id} className="w-40 md:w-full flex-shrink-0 snap-start">
-                <ProductCard product={product} />
+        ) : (
+          <>
+            {/* Habit Loop: Reorder / Featured */}
+            {featuredProducts.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center">
+                    Top Featured
+                  </h2>
+                </div>
+                <div className="flex overflow-x-auto hide-scrollbar gap-4 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x md:grid md:grid-cols-4 lg:grid-cols-5 md:overflow-visible">
+                  {featuredProducts.map(product => (
+                    <div key={product.id} className="w-40 md:w-full flex-shrink-0 snap-start">
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Dynamic Category Rows from DB */}
+            {Object.entries(productsByCategory).map(([categoryName, catProducts]) => (
+              <section key={categoryName}>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                    {categoryName}
+                  </h2>
+                  <span 
+                    onClick={() => router.push('/products')}
+                    className="text-orange-600 text-sm font-semibold flex items-center cursor-pointer hover:text-orange-700 transition-colors"
+                  >
+                    See all <ChevronRight className="h-4 w-4 ml-1" />
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                  {catProducts.slice(0, 10).map(product => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </section>
+            ))}
+            
+            {products.length === 0 && (
+              <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
+                <h3 className="text-lg font-medium text-gray-900">No products available yet</h3>
+                <p className="mt-1 text-gray-500">Check back later for exciting new products.</p>
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Category Rows */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              Daily Staples
-            </h2>
-            <span className="text-orange-600 text-sm font-semibold flex items-center cursor-pointer hover:text-orange-700 transition-colors">
-              See all <ChevronRight className="h-4 w-4 ml-1" />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {MOCK_PRODUCTS.filter(p => p.category === 'Staples').map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              Snacks & Beverages
-            </h2>
-            <span className="text-orange-600 text-sm font-semibold flex items-center cursor-pointer hover:text-orange-700 transition-colors">
-              See all <ChevronRight className="h-4 w-4 ml-1" />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {MOCK_PRODUCTS.filter(p => p.category === 'Snacks' || p.category === 'Beverages').map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              Personal Care
-            </h2>
-            <span className="text-orange-600 text-sm font-semibold flex items-center cursor-pointer hover:text-orange-700 transition-colors">
-              See all <ChevronRight className="h-4 w-4 ml-1" />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {MOCK_PRODUCTS.filter(p => p.category === 'Personal Care').map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              Cleaning Products
-            </h2>
-            <span className="text-orange-600 text-sm font-semibold flex items-center cursor-pointer hover:text-orange-700 transition-colors">
-              See all <ChevronRight className="h-4 w-4 ml-1" />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {MOCK_PRODUCTS.filter(p => p.category === 'Cleaning Products').map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              Baby Products
-            </h2>
-            <span className="text-orange-600 text-sm font-semibold flex items-center cursor-pointer hover:text-orange-700 transition-colors">
-              See all <ChevronRight className="h-4 w-4 ml-1" />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {MOCK_PRODUCTS.filter(p => p.category === 'Baby Products').map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-              Household Essentials
-            </h2>
-            <span className="text-orange-600 text-sm font-semibold flex items-center cursor-pointer hover:text-orange-700 transition-colors">
-              See all <ChevronRight className="h-4 w-4 ml-1" />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-            {MOCK_PRODUCTS.filter(p => p.category === 'Household Essentials').map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
+            )}
+          </>
+        )}
         
         {/* Extra padding to scroll past the bottom nav on mobile */}
         <div className="h-24 md:h-12"></div>

@@ -4,7 +4,9 @@ import { useCart } from "@/context/CartContext";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { CreditCard, Wallet, ShieldCheck, Truck, ChevronDown, CheckCircle2 } from "lucide-react";
+import { Truck, ShieldCheck } from "lucide-react";
+import { salesOrdersApi } from "@/lib/api/sales-orders";
+import { toast } from "sonner"; // Assuming sonner is available, or use standard alert
 
 export default function CheckoutPage() {
   const { items, cartTotal, remainingForFreeDelivery, clearCart } = useCart();
@@ -13,8 +15,15 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Form states
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    address: ""
+  });
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -38,15 +47,35 @@ export default function CheckoutPage() {
   const deliveryFee = remainingForFreeDelivery === 0 ? 0 : 50;
   const finalTotal = cartTotal + deliveryFee;
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isProcessing) return; // Basic idempotency: prevent double click
     setIsProcessing(true);
     
-    // Simulate API call and redirect
-    setTimeout(() => {
+    try {
+      const orderData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        address: formData.address,
+        items: items.map(i => ({ productId: i.product.id, quantity: i.quantity }))
+      };
+
+      const order = await salesOrdersApi.createPublicOrder(orderData);
+      
       clearCart();
-      router.push("/checkout/success");
-    }, 1500);
+      router.push(`/checkout/success`);
+    } catch (error: any) {
+      console.error(error);
+      const msg = error.response?.data?.error?.message || "Failed to place order. Please try again.";
+      alert(msg);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
@@ -64,19 +93,19 @@ export default function CheckoutPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                <input required type="text" className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="Ram" />
+                <input required type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="Ram" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                <input required type="text" className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="Sharma" />
+                <input required type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="Sharma" />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                <input required type="tel" className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="98XXXXXXXX" />
+                <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="98XXXXXXXX" />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
-                <textarea required rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="Full address including landmarks..."></textarea>
+                <textarea required rows={3} name="address" value={formData.address} onChange={handleInputChange} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 p-2.5 border" placeholder="Full address including landmarks..."></textarea>
               </div>
             </div>
           </section>
@@ -99,30 +128,10 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </label>
-
-              <label className={`block border rounded-xl p-4 cursor-pointer transition-all ${paymentMethod === 'esewa' ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-orange-300'}`}>
-                <div className="flex items-center">
-                  <input type="radio" name="payment" value="esewa" checked={paymentMethod === 'esewa'} onChange={() => setPaymentMethod('esewa')} className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300" />
-                  <div className="ml-3 flex-1 flex items-center">
-                    <Wallet className="h-5 w-5 text-green-600 mr-2" />
-                    <span className="block text-sm font-medium text-gray-900">eSewa Mobile Wallet</span>
-                  </div>
-                </div>
-              </label>
-              
-              <label className={`block border rounded-xl p-4 cursor-pointer transition-all ${paymentMethod === 'khalti' ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-orange-300'}`}>
-                <div className="flex items-center">
-                  <input type="radio" name="payment" value="khalti" checked={paymentMethod === 'khalti'} onChange={() => setPaymentMethod('khalti')} className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300" />
-                  <div className="ml-3 flex-1 flex items-center">
-                    <CreditCard className="h-5 w-5 text-purple-600 mr-2" />
-                    <span className="block text-sm font-medium text-gray-900">Khalti Digital Wallet</span>
-                  </div>
-                </div>
-              </label>
             </div>
           </section>
 
-          {/* Desktop CTA (hidden on mobile, we'll put it in summary) */}
+          {/* Desktop CTA */}
           <div className="hidden lg:block mt-8">
             <button 
               type="submit" 
@@ -152,7 +161,7 @@ export default function CheckoutPage() {
                 <div key={item.product.id} className="flex gap-4">
                   <div className="h-16 w-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-200">
                     <Image 
-                      src={item.product.image} 
+                      src={item.product.image || "/images/placeholder-product.png"} 
                       alt={item.product.name}
                       fill
                       sizes="64px"

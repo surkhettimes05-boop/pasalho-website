@@ -120,7 +120,7 @@ export default function AdminProducts() {
                       <div className="h-12 w-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative">
                         {product.imageUrl ? (
                           <Image 
-                            src={`http://localhost:3000${product.imageUrl}`} 
+                            src={product.imageUrl.startsWith('http') ? product.imageUrl : `${process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '') : 'http://localhost:3000'}${product.imageUrl}`} 
                             alt={product.name}
                             fill
                             sizes="48px"

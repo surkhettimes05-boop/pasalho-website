@@ -109,8 +109,8 @@ export function ProductForm({ initialData, onClose, onSuccess }: ProductFormProp
       const payload = { ...data, imageUrl };
       
       // Fix empty string optional values
-      if (!payload.brandId) payload.brandId = null;
-      if (!payload.barcode) payload.barcode = null;
+      if (payload.brandId === "") payload.brandId = null;
+      if (payload.barcode === "") payload.barcode = null;
 
       if (initialData) {
         await catalogApi.updateProduct(initialData.id, payload);
@@ -146,7 +146,7 @@ export function ProductForm({ initialData, onClose, onSuccess }: ProductFormProp
               <div className="flex items-center gap-4">
                 <div className="w-24 h-24 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden flex items-center justify-center relative">
                   {imageUrl ? (
-                    <Image src={`http://localhost:3000${imageUrl}`} alt="Product" fill className="object-cover" />
+                    <Image src={imageUrl.startsWith('http') ? imageUrl : `${process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '') : 'http://localhost:3000'}${imageUrl}`} alt="Product" fill className="object-cover" />
                   ) : (
                     <span className="text-gray-400 text-xs">No image</span>
                   )}

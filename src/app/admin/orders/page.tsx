@@ -1,13 +1,34 @@
+"use client";
+
 import { Search, Filter, Eye } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { salesOrdersApi, SalesOrder } from "@/lib/api/sales-orders";
+import { formatDistanceToNow } from "date-fns";
 
 export default function AdminOrders() {
-  const recentOrders = [
-    { id: "ORD-7392", customer: "Sita Sharma", items: 3, date: "2 mins ago", total: "NPR 1,250", status: "Processing" },
-    { id: "ORD-7391", customer: "Ram Kumar", items: 8, date: "15 mins ago", total: "NPR 4,500", status: "Delivered" },
-    { id: "ORD-7390", customer: "Gita Thapa", items: 1, date: "1 hour ago", total: "NPR 850", status: "Processing" },
-    { id: "ORD-7389", customer: "Hari Prasad", items: 15, date: "3 hours ago", total: "NPR 12,400", status: "Delivered" },
-    { id: "ORD-7388", customer: "Sunil Shrestha", items: 4, date: "5 hours ago", total: "NPR 2,100", status: "Cancelled" },
-  ];
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: () => salesOrdersApi.getOrders(),
+    // Note: Since this requires auth, in a real env it would fail until we login.
+    // We handle the error gracefully for the UI test.
+    retry: false
+  });
+
+  const orders = data?.items || [];
+
+  const parseCustomerNotes = (notes: string | null) => {
+    if (!notes) return { name: "Unknown", phone: "", address: "" };
+    try {
+      const parsed = JSON.parse(notes);
+      return {
+        name: parsed.name || "Unknown",
+        phone: parsed.phone || "",
+        address: parsed.address || ""
+      };
+    } catch {
+      return { name: "Storefront Guest", phone: "", address: notes };
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -37,44 +58,68 @@ export default function AdminOrders() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 text-gray-500 uppercase text-xs font-semibold">
-              <tr>
-                <th className="px-6 py-4">Order ID</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Items</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Total</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {recentOrders.map((order, idx) => (
-                <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-gray-900">{order.id}</td>
-                  <td className="px-6 py-4 font-medium text-gray-800">{order.customer}</td>
-                  <td className="px-6 py-4">{order.items} items</td>
-                  <td className="px-6 py-4 text-gray-500">{order.date}</td>
-                  <td className="px-6 py-4 font-bold text-gray-900">{order.total}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-700' : 
-                      order.status === 'Processing' ? 'bg-orange-100 text-orange-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </td>
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-500">Loading orders...</div>
+          ) : error ? (
+            <div className="p-8 text-center text-red-500">
+              Failed to load orders. You may need to authenticate as an admin first.
+              <br/>
+              <span className="text-sm text-gray-400">({(error as any).message})</span>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">No orders found.</div>
+          ) : (
+            <table className="w-full text-left text-sm text-gray-600">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-xs font-semibold">
+                <tr>
+                  <th className="px-6 py-4">Order ID</th>
+                  <th className="px-6 py-4">Customer Info</th>
+                  <th className="px-6 py-4">Items</th>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Total</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {orders.map((order: SalesOrder) => {
+                  const customer = order.source === 'STOREFRONT' 
+                    ? parseCustomerNotes(order.notes) 
+                    : { name: order.retailer?.shopName || "Unknown", phone: order.retailer?.phone || "", address: "B2B Order" };
+                  
+                  return (
+                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-gray-900">{order.orderNo}</td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-800">{customer.name}</div>
+                        <div className="text-xs text-gray-500">{customer.phone}</div>
+                      </td>
+                      <td className="px-6 py-4">{order._count?.items || 0} items</td>
+                      <td className="px-6 py-4 text-gray-500">
+                        {formatDistanceToNow(new Date(order.createdAt), { addSuffix: true })}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-gray-900">NPR {Number(order.grandTotal).toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          order.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-700' : 
+                          ['PLACED', 'PACKED', 'CONFIRMED'].includes(order.status) ? 'bg-orange-100 text-orange-700' :
+                          order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

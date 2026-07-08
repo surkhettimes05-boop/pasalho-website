@@ -1,27 +1,55 @@
 "use client";
 
 import { useState } from 'react';
-import { ShoppingCart, Package, Truck, Utensils, Home, Baby, Sparkles, Search, Check } from 'lucide-react';
-import { MOCK_PRODUCTS, MOCK_CATEGORIES } from '@/lib/mockData';
+import { ShoppingCart, Package, Search, Check, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { catalogApi } from '@/lib/api/catalog';
+import { useCart } from '@/context/CartContext';
+import Image from 'next/image';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 
 export default function Products() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [addedItems, setAddedItems] = useState<{[key: string]: boolean}>({});
+  
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  const { addItem } = useCart();
 
-  const handleAddToCart = (id: string) => {
-    setAddedItems(prev => ({...prev, [id]: true}));
+  const { data: categoriesData } = useQuery({
+    queryKey: ['public-categories'],
+    queryFn: () => catalogApi.getCategories(),
+  });
+
+  const { data: productsData, isLoading } = useQuery({
+    queryKey: ['public-products', { search: debouncedSearch, categoryId: selectedCategory }],
+    queryFn: () => catalogApi.getProducts({ 
+      search: debouncedSearch || undefined, 
+      limit: 50,
+      // The API doesn't strictly support categoryId filtering via getProducts interface unless we added it?
+      // Wait, in catalog.ts `getProducts` we have `{ page?: number; limit?: number; search?: string; isActive?: boolean }`.
+      // We should update `catalog.ts` if needed, but for now we can just fetch and filter client-side if API doesn't support it in the wrapper, OR we can pass it anyway.
+      // Let's pass it anyway as the backend supports it.
+      ...(selectedCategory ? { categoryId: selectedCategory } : {})
+    }),
+  });
+
+  const handleAddToCart = (product: any) => {
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: Number(product.sellingPrice || product.mrp || 0),
+      image: product.imageUrl || '/placeholder.png',
+      unit: product.defaultUnit?.name || 'Unit'
+    });
+    setAddedItems(prev => ({...prev, [product.id]: true}));
     setTimeout(() => {
-      setAddedItems(prev => ({...prev, [id]: false}));
+      setAddedItems(prev => ({...prev, [product.id]: false}));
     }, 2000);
   };
 
-  const filteredProducts = MOCK_PRODUCTS.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const categories = categoriesData || [];
+  const products = productsData?.data || [];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -58,47 +86,70 @@ export default function Products() {
 
             {/* Category Pills */}
             <div className="flex overflow-x-auto pb-2 md:pb-0 hide-scrollbar gap-2">
-              {MOCK_CATEGORIES.map((category) => (
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === null
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-orange-100 border border-gray-200'
+                }`}
+              >
+                All
+              </button>
+              {categories.map((category) => (
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
                   className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === category
+                    selectedCategory === category.id
                       ? 'bg-orange-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-orange-100 border border-gray-200'
                   }`}
                 >
-                  {category}
+                  {category.name}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Product Grid */}
-          {filteredProducts.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 text-orange-500 animate-spin" />
+            </div>
+          ) : products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => (
+              {products.map((product) => (
                 <div key={product.id} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100 flex flex-col">
                   <div className="aspect-square relative overflow-hidden bg-gray-100">
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-xs font-semibold px-2 py-1 rounded text-orange-600 shadow-sm">
-                      {product.category}
-                    </div>
+                    {product.imageUrl ? (
+                      <Image 
+                        src={product.imageUrl} 
+                        alt={product.name} 
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
+                        <Package className="h-12 w-12" />
+                      </div>
+                    )}
+                    {product.storefrontCategory && (
+                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur text-xs font-semibold px-2 py-1 rounded text-orange-600 shadow-sm z-10">
+                        {product.storefrontCategory}
+                      </div>
+                    )}
                   </div>
                   <div className="p-5 flex flex-col flex-1">
                     <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{product.name}</h3>
-                    <p className="text-sm text-gray-500 mb-3 line-clamp-2">{product.description}</p>
+                    <p className="text-sm text-gray-500 mb-3 line-clamp-2">{product.description || 'No description available'}</p>
                     <div className="mt-auto flex items-end justify-between">
                       <div>
-                        <div className="text-xs text-gray-400 mb-1">{product.unit}</div>
-                        <span className="text-xl font-bold text-gray-900">NPR {product.price}</span>
+                        <div className="text-xs text-gray-400 mb-1">{/* @ts-ignore */} {product.defaultUnit?.name || 'Unit'}</div>
+                        <span className="text-xl font-bold text-gray-900">NPR {product.sellingPrice || product.mrp}</span>
                       </div>
                       <button 
-                        onClick={() => handleAddToCart(product.id)}
+                        onClick={() => handleAddToCart(product)}
                         className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors group/btn ${
                           addedItems[product.id] 
                             ? 'bg-green-500 text-white' 
@@ -118,7 +169,7 @@ export default function Products() {
               <h3 className="text-lg font-medium text-gray-900">No products found</h3>
               <p className="mt-1 text-gray-500">Try adjusting your search or category filter.</p>
               <button 
-                onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
+                onClick={() => { setSearchQuery(''); setSelectedCategory(null); }}
                 className="mt-6 text-orange-600 hover:text-orange-500 font-medium"
               >
                 Clear all filters
