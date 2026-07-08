@@ -22,7 +22,8 @@ function ProductCard({ product }: { product: ApiProduct }) {
       name: product.name,
       price: Number(product.sellingPrice || product.mrp || 0),
       image: product.imageUrl || '/placeholder.png',
-      unit: (product as any).defaultUnit?.name || 'Unit'
+      unit: (product as any).defaultUnit?.name || 'Unit',
+      category: (product as any).category?.name || 'Uncategorized'
     });
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
@@ -58,7 +59,7 @@ function ProductCard({ product }: { product: ApiProduct }) {
       </div>
       
       <div className="flex-1 flex flex-col">
-        <div className="text-[10px] md:text-xs text-gray-500 mb-1">{/* @ts-ignore */}{(product.defaultUnit?.name) || 'Unit'}</div>
+        <div className="text-[10px] md:text-xs text-gray-500 mb-1">{((product as any).defaultUnit?.name) || 'Unit'}</div>
         <h3 className="font-semibold text-gray-900 text-sm md:text-base leading-tight mb-1.5 line-clamp-2 hover:text-orange-600 transition-colors cursor-pointer">
           {product.name}
         </h3>

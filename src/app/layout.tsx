@@ -30,6 +30,8 @@ export const metadata: Metadata = {
   },
 };
 
+import QueryProvider from "@/components/QueryProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,9 +40,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} antialiased`}>
       <body className="flex flex-col min-h-screen">
-        <CartProvider>
-          {children}
-        </CartProvider>
+        <QueryProvider>
+          <CartProvider>
+            {children}
+          </CartProvider>
+        </QueryProvider>
       </body>
     </html>
   );

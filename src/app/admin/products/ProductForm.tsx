@@ -12,7 +12,7 @@ import Image from "next/image";
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   skuCode: z.string().min(1, "SKU is required"),
-  barcode: z.string().optional(),
+  barcode: z.string().optional().nullable(),
   categoryId: z.string().min(1, "Category is required"),
   brandId: z.string().optional().nullable(),
   defaultUnitId: z.string().min(1, "Unit is required"),
@@ -41,7 +41,7 @@ export function ProductForm({ initialData, onClose, onSuccess }: ProductFormProp
   const [imageUrl, setImageUrl] = useState<string | null>(initialData?.imageUrl || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<ProductFormData>({
+  const form = useForm({
     resolver: zodResolver(productSchema),
     defaultValues: initialData
       ? {

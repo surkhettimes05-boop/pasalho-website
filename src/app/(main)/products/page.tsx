@@ -40,7 +40,8 @@ export default function Products() {
       name: product.name,
       price: Number(product.sellingPrice || product.mrp || 0),
       image: product.imageUrl || '/placeholder.png',
-      unit: product.defaultUnit?.name || 'Unit'
+      unit: product.defaultUnit?.name || 'Unit',
+      category: product.category?.name || 'Uncategorized'
     });
     setAddedItems(prev => ({...prev, [product.id]: true}));
     setTimeout(() => {
@@ -145,7 +146,7 @@ export default function Products() {
                     <p className="text-sm text-gray-500 mb-3 line-clamp-2">{product.description || 'No description available'}</p>
                     <div className="mt-auto flex items-end justify-between">
                       <div>
-                        <div className="text-xs text-gray-400 mb-1">{/* @ts-ignore */} {product.defaultUnit?.name || 'Unit'}</div>
+                        <div className="text-xs text-gray-400 mb-1">{((product as any).defaultUnit?.name) || 'Unit'}</div>
                         <span className="text-xl font-bold text-gray-900">NPR {product.sellingPrice || product.mrp}</span>
                       </div>
                       <button 

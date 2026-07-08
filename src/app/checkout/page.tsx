@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Truck, ShieldCheck } from "lucide-react";
 import { salesOrdersApi } from "@/lib/api/sales-orders";
-import { toast } from "sonner"; // Assuming sonner is available, or use standard alert
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const { items, cartTotal, remainingForFreeDelivery, clearCart } = useCart();
