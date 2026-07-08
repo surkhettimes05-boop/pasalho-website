@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Search, Bell } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function AdminLayout({
   children,
@@ -14,8 +14,19 @@ export default function AdminLayout({
   children: React.ReactNode;
 }>) {
   const [queryClient] = useState(() => new QueryClient());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
 
   const pathname = usePathname();
+
+  useEffect(() => {
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      router.push('/login');
+    } else {
+      setIsAuthenticated(true);
+    }
+  }, [router]);
 
   const getLinkClass = (path: string) => {
     const isActive = pathname === path;
@@ -29,6 +40,14 @@ export default function AdminLayout({
   const getIconClass = (path: string, activeColor: string) => {
     return `h-5 w-5 ${pathname === path ? activeColor : "text-slate-400"}`;
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -69,10 +88,16 @@ export default function AdminLayout({
               <Settings className="h-5 w-5 text-slate-400" />
               Settings
             </button>
-            <Link href="/" className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition-colors mt-1">
+            <button 
+              onClick={() => {
+                localStorage.removeItem('admin_token');
+                window.location.href = '/login';
+              }}
+              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition-colors mt-1"
+            >
               <LogOut className="h-5 w-5 text-slate-400" />
               Exit Admin
-            </Link>
+            </button>
           </div>
         </aside>
 
